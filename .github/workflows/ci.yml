@@ -78,14 +78,14 @@ jobs:
       - name: Test ${{ matrix.TARGET_ARCH }}
         working-directory: ${{runner.workspace}}/build
         shell: bash
-        run: ctest -C $BUILD_TYPE -E test_appimage_header
+        run: ctest -C $BUILD_TYPE --output-on-failure
 
       - name: Prepare artifacts
         shell: bash
         working-directory: ${{runner.workspace}}/build
         run: |
           mkdir -p ../dist
-          cp src/runtime ../dist/runtime-$BUILD_TYPE-$TARGET_ARCH
+          cp src/runtime/runtime ../dist/runtime-$BUILD_TYPE-$TARGET_ARCH
 
       - name: Upload Artifacts ${{ env.TARGET_ARCH }}
         uses: actions/upload-artifact@v2.1.4
