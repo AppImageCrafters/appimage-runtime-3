@@ -4,6 +4,6 @@
 
 #include "appimage-header.h"
 
-
+int mount();
 
 #endif //APPIMAGE_TYPE3_RUNTIME_COMMANDS_H

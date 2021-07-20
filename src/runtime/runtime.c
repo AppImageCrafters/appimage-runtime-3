@@ -1,14 +1,14 @@
 #include <stdio.h>
 
-#include "appimage-header.h"
+#include "commands/commands.h"
 
 int main() {
-    char* target = "/proc/self/exe";
+//    char* target = "/proc/self/exe";
 
-    appimage_header_t* header = read_appimage_header(target);
-    assert_header(header, 0x03, PAYLOAD_SQUASHFS);
+//    appimage_header_t* header = read_appimage_header(target);
+//    assert_header(header, 0x03, PAYLOAD_SQUASHFS);
 
-    printf("Hello world, this is the AppImage type 3 runtime!\n");
+    mount("/home/alexis/Workspace/third_party/curl-appimage/AppDir.sqfs");
     return 0;
 }
 
