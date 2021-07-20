@@ -10,17 +10,18 @@
 
 #include "commands.h"
 
+/* Convenience struct grouping all the squashfuse runtime settings */
+typedef struct {
+    struct fuse_args args;
+    sqfs_opts opts;
+    struct fuse_cmdline_opts fuse_cmdline_opts;
+    struct fuse_lowlevel_ops sqfs_ll_ops;
+} squashfuse_setup;
 
-void _init_squashfuse(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdline_opts* fuse_cmdline_opts,
-                      struct fuse_lowlevel_ops* sqfs_ll_ops);
+squashfuse_setup* _init_squashfuse() {
+    squashfuse_setup* setup = malloc(sizeof(squashfuse_setup));
 
-
-int _start_fuse_daemon(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdline_opts* fuse_cmdline_opts,
-                       struct fuse_lowlevel_ops* sqfs_ll_ops);
-
-void _init_squashfuse(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdline_opts* fuse_cmdline_opts,
-                      struct fuse_lowlevel_ops* sqfs_ll_ops) {
-    int argc = 7;
+    int argc = 6;
     char* argv[argc + 1];
     argv[0] = "/home/alexis/Workspace/third_party/curl-appimage/AppDir.sqfs";
     argv[1] = "/home/alexis/Workspace/third_party/curl-appimage/AppDir.sqfs";
@@ -43,37 +44,38 @@ void _init_squashfuse(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdli
             {"timeout=%u", offsetof(sqfs_opts, idle_timeout_secs), 0},
             FUSE_OPT_END
     };
-    memset(sqfs_ll_ops, 0, sizeof((*sqfs_ll_ops)));
-    (*sqfs_ll_ops).getattr = sqfs_ll_op_getattr;
-    (*sqfs_ll_ops).opendir = sqfs_ll_op_opendir;
-    (*sqfs_ll_ops).releasedir = sqfs_ll_op_releasedir;
-    (*sqfs_ll_ops).readdir = sqfs_ll_op_readdir;
-    (*sqfs_ll_ops).lookup = sqfs_ll_op_lookup;
-    (*sqfs_ll_ops).open = sqfs_ll_op_open;
-    (*sqfs_ll_ops).create = sqfs_ll_op_create;
-    (*sqfs_ll_ops).release = sqfs_ll_op_release;
-    (*sqfs_ll_ops).read = sqfs_ll_op_read;
-    (*sqfs_ll_ops).readlink = sqfs_ll_op_readlink;
-    (*sqfs_ll_ops).listxattr = sqfs_ll_op_listxattr;
-    (*sqfs_ll_ops).getxattr = sqfs_ll_op_getxattr;
-    (*sqfs_ll_ops).forget = sqfs_ll_op_forget;
-    (*sqfs_ll_ops).statfs = stfs_ll_op_statfs;
+
+    memset(&setup->sqfs_ll_ops, 0, sizeof(setup->sqfs_ll_ops));
+    setup->sqfs_ll_ops.getattr = sqfs_ll_op_getattr;
+    setup->sqfs_ll_ops.opendir = sqfs_ll_op_opendir;
+    setup->sqfs_ll_ops.releasedir = sqfs_ll_op_releasedir;
+    setup->sqfs_ll_ops.readdir = sqfs_ll_op_readdir;
+    setup->sqfs_ll_ops.lookup = sqfs_ll_op_lookup;
+    setup->sqfs_ll_ops.open = sqfs_ll_op_open;
+    setup->sqfs_ll_ops.create = sqfs_ll_op_create;
+    setup->sqfs_ll_ops.release = sqfs_ll_op_release;
+    setup->sqfs_ll_ops.read = sqfs_ll_op_read;
+    setup->sqfs_ll_ops.readlink = sqfs_ll_op_readlink;
+    setup->sqfs_ll_ops.listxattr = sqfs_ll_op_listxattr;
+    setup->sqfs_ll_ops.getxattr = sqfs_ll_op_getxattr;
+    setup->sqfs_ll_ops.forget = sqfs_ll_op_forget;
+    setup->sqfs_ll_ops.statfs = stfs_ll_op_statfs;
 
     /* PARSE ARGS */
-    (*args).argc = argc;
-    (*args).argv = argv;
-    (*args).allocated = 0;
+    setup->args.argc = argc;
+    setup->args.argv = argv;
+    setup->args.allocated = 0;
 
-    (*opts).progname = argv[0];
-    (*opts).image = NULL;
-    (*opts).mountpoint = 0;
-    (*opts).offset = 0;
-    (*opts).idle_timeout_secs = 0;
-    if (fuse_opt_parse(args, opts, fuse_opts, sqfs_opt_proc) == -1)
+    setup->opts.progname = argv[0];
+    setup->opts.image = NULL;
+    setup->opts.mountpoint = 0;
+    setup->opts.offset = 0;
+    setup->opts.idle_timeout_secs = 0;
+    if (fuse_opt_parse(&setup->args, &setup->opts, fuse_opts, sqfs_opt_proc) == -1)
         sqfs_usage(argv[0], true);
 
 #if FUSE_USE_VERSION >= 30
-    if (fuse_parse_cmdline(args, fuse_cmdline_opts) != 0)
+    if (fuse_parse_cmdline(&setup->args, &setup->fuse_cmdline_opts) != 0)
 #else
         if (fuse_parse_cmdline(&args,
                            &fuse_cmdline_opts.mountpoint,
@@ -81,7 +83,7 @@ void _init_squashfuse(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdli
                            &fuse_cmdline_opts.foreground) == -1)
 #endif
         sqfs_usage(argv[0], true);
-    if ((*fuse_cmdline_opts).mountpoint == NULL)
+    if (setup->fuse_cmdline_opts.mountpoint == NULL)
         sqfs_usage(argv[0], true);
 
     /* fuse_daemonize() will unconditionally clobber fds 0-2.
@@ -106,16 +108,17 @@ void _init_squashfuse(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdli
             break;
         }
     }
+
+    return setup;
 }
 
 
-int _start_fuse_daemon(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdline_opts* fuse_cmdline_opts,
-                       struct fuse_lowlevel_ops* sqfs_ll_ops) {
+int _start_fuse_daemon(squashfuse_setup* setup) {
     int err;
     sqfs_ll* ll;
 
     /* OPEN FS */
-    err = !(ll = sqfs_ll_open((*opts).image, (*opts).offset));
+    err = !(ll = sqfs_ll_open(setup->opts.image, setup->opts.offset));
 
     /* STARTUP FUSE */
     if (!err) {
@@ -123,15 +126,15 @@ int _start_fuse_daemon(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdl
         err = -1;
         if (sqfs_ll_mount(
                 &ch,
-                (*fuse_cmdline_opts).mountpoint,
-                args,
-                sqfs_ll_ops,
-                sizeof((*sqfs_ll_ops)),
+                setup->fuse_cmdline_opts.mountpoint,
+                &setup->args,
+                &setup->sqfs_ll_ops,
+                sizeof(setup->sqfs_ll_ops),
                 ll) == SQFS_OK) {
-            if (sqfs_ll_daemonize((*fuse_cmdline_opts).foreground) != -1) {
+            if (sqfs_ll_daemonize(setup->fuse_cmdline_opts.foreground) != -1) {
                 if (fuse_set_signal_handlers(ch.session) != -1) {
-                    if ((*opts).idle_timeout_secs) {
-                        setup_idle_timeout(ch.session, (*opts).idle_timeout_secs);
+                    if (setup->opts.idle_timeout_secs) {
+                        setup_idle_timeout(ch.session, setup->opts.idle_timeout_secs);
                     }
                     /* FIXME: multithreading */
                     err = fuse_session_loop(ch.session);
@@ -140,23 +143,18 @@ int _start_fuse_daemon(struct fuse_args* args, sqfs_opts* opts, struct fuse_cmdl
                 }
             }
             sqfs_ll_destroy(ll);
-            sqfs_ll_unmount(&ch, (*fuse_cmdline_opts).mountpoint);
+            sqfs_ll_unmount(&ch, setup->fuse_cmdline_opts.mountpoint);
         }
     }
-    fuse_opt_free_args(args);
+    fuse_opt_free_args(&setup->args);
     free(ll);
-    free((*fuse_cmdline_opts).mountpoint);
+    free(setup->fuse_cmdline_opts.mountpoint);
 
     return -err;
 }
 
 int mount_payload() {
-    struct fuse_args args;
-    sqfs_opts opts;
-    struct fuse_cmdline_opts fuse_cmdline_opts;
-    struct fuse_lowlevel_ops sqfs_ll_ops;
-
-    _init_squashfuse(&args, &opts, &fuse_cmdline_opts, &sqfs_ll_ops);
-    return _start_fuse_daemon(&args, &opts, &fuse_cmdline_opts, &sqfs_ll_ops);
+    squashfuse_setup* setup = _init_squashfuse();
+    return _start_fuse_daemon(setup);
 }
 
