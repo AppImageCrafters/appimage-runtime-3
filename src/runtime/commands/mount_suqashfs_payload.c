@@ -63,7 +63,8 @@ struct fuse_args init_fuse_args(char* image) {
 
 
 int
-start_fuse(const char* mount_point, struct fuse_lowlevel_ops* sqfs_ll_ops, sqfs_ll* ll, struct fuse_args* fuse_args) {
+start_fuse(const char* mount_point, struct fuse_lowlevel_ops* sqfs_ll_ops, sqfs_ll* ll, struct fuse_args* fuse_args,
+           int* control_pipe) {
     sqfs_ll_chan ch;
     sqfs_err mount_res = sqfs_ll_mount(&ch, mount_point, fuse_args, sqfs_ll_ops, sizeof((*sqfs_ll_ops)), ll);
 
@@ -73,7 +74,19 @@ start_fuse(const char* mount_point, struct fuse_lowlevel_ops* sqfs_ll_ops, sqfs_
 
         int fuse_session_res = -1;
         if (fuse_set_signal_handlers(ch.session) != -1) {
+            // unmount when the fs is no longer needed
+            setup_idle_timeout(ch.session, 1);
+
+            if (control_pipe != NULL) {
+                // notify mount readiness
+                char buf = 1;
+                write(control_pipe[1], &buf, 1);
+            }
+
+
+            // process fuse messages, execution will be retained in the loop until the resource is released
             fuse_session_res = fuse_session_loop(ch.session);
+            teardown_idle_timeout();
             fuse_remove_signal_handlers(ch.session);
         }
 
@@ -86,7 +99,20 @@ start_fuse(const char* mount_point, struct fuse_lowlevel_ops* sqfs_ll_ops, sqfs_
     }
 }
 
-int mount_payload(char* file, char* mount_point, size_t offset) {
+/**
+ * Mounts the file system contained from <file> at <offset> into <mount_point>.
+ *
+ * A fuse session loop is started therefore the execution only abandons the function when the resource is unmount.
+ * The control_pipe can be used to wait for the loop to be ready. A byte (1) will be written into it just before the
+ * loop is started.
+ *
+ * @param control_pipe
+ * @param file
+ * @param mount_point
+ * @param offset
+ * @return
+ */
+int mount_squashfuse_payload(char* file, const char* mount_point, size_t offset, int* control_pipe) {
     struct fuse_lowlevel_ops sqfs_ll_ops = init_fuse_operations();
     struct fuse_args fuse_args = init_fuse_args(file);
 
@@ -97,9 +123,40 @@ int mount_payload(char* file, char* mount_point, size_t offset) {
     err = !(ll = sqfs_ll_open(file, offset));
 
     if (!err)
-        err = start_fuse(mount_point, &sqfs_ll_ops, ll, &fuse_args);
+        err = start_fuse(mount_point, &sqfs_ll_ops, ll, &fuse_args, control_pipe);
 
     free(ll);
     fuse_opt_free_args(&fuse_args);
     return -err;
+}
+
+int mount_squashfs_payload_forked(char* file, char* mount_point, size_t offset) {
+    int control_pipe[2];
+    pid_t child_pid;
+    if (pipe(control_pipe) != 0) {
+        perror("pipe");
+        exit(1);
+    }
+
+    if ((child_pid = fork()) == -1) {
+        perror("fork");
+        exit(1);
+    }
+
+    if (child_pid == 0) {
+        /* Child process closes up input side of pipe */
+        close(control_pipe[0]);
+
+        /* execution will continue into the child process */
+        exit(mount_squashfuse_payload(file, mount_point, offset, control_pipe));
+    } else {
+        /* Parent process closes up output side of pipe */
+        close(control_pipe[1]);
+
+        char buf;
+        /* Wait for a byte to be send trough the pipe, this will signal the readiness of the fuse daemon */
+        read(control_pipe[0], &buf, 1);
+    }
+
+    return 0;
 }
