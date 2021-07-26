@@ -165,7 +165,7 @@ int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, 
         // notify errors if any
         ssize_t bw = write(control_pipe[1], &res, 1);
         if (bw != PIPE_STATUS_MSG_LENGTH)
-            fprintf(stderr, "ERROR: Unable to receive fuse session status using control pipe.\n");
+            fprintf(stderr, "ERROR: Unable to communicate fuse session status using control pipe.\n");
         exit(res);
     } else {
         /* Parent process closes up output side of pipe */
@@ -175,7 +175,10 @@ int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, 
 
         char status = 0;
         /* Wait for a byte to be send trough the pipe, this will signal the readiness of the fuse daemon */
-        read(control_pipe[0], &status, 1);
+        ssize_t bw = read(control_pipe[0], &status, 1);
+        if (bw != PIPE_STATUS_MSG_LENGTH)
+            fprintf(stderr, "ERROR: Unable to receive fuse session status using control pipe.\n");
+
         return status;
     }
 }
