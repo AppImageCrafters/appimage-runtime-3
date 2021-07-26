@@ -13,9 +13,9 @@ typedef struct {
     unsigned char appimage_magic[12];
     unsigned short header_revision;
     unsigned short payload_format;
-    off_t payload_offset __attribute__ ((aligned (8)));
-    off_t resources_offset __attribute__ ((aligned (8)));
-    off_t signature_offset __attribute__ ((aligned (8)));
+    size_t payload_offset __attribute__ ((aligned (8)));
+    size_t resources_offset __attribute__ ((aligned (8)));
+    size_t signature_offset __attribute__ ((aligned (8)));
 } appimage_header_t;
 
 

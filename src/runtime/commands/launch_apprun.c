@@ -22,12 +22,14 @@ char* create_apprun_path(const char* appdir_path) {
     return apprun_path;
 }
 
-void execute_apprun(const char* appimage_path, const char* appdir_path, char** argv) {
+int execute_apprun(const char* appimage_path, const char* appdir_path, char** argv) {
     char* apprun_path = create_apprun_path(appdir_path);
 
     set_runtime_environment(appimage_path, appdir_path);
 
     argv[0] = apprun_path;
-    execv(apprun_path, argv);
+    int status = execv(apprun_path, argv);
+
     fprintf(stderr, "Unable to run: %s", apprun_path);
+    return status;
 }

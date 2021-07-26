@@ -27,6 +27,6 @@ int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, 
  */
 int mount_squashfuse_payload(char* file, const char* mount_point, size_t offset, int* control_pipe);
 
-void execute_apprun(const char* appimage_path, const char* appdir_path, char** argv);
+int execute_apprun(const char* appimage_path, const char* appdir_path, char** argv);
 
 #endif //APPIMAGE_TYPE3_RUNTIME_COMMANDS_H
