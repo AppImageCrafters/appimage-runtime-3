@@ -4,6 +4,7 @@
 #include <libgen.h>
 
 // squashfuse headers
+#include "fuseprivate.h"
 #include "ll.h"
 #include "nonstd.h"
 
