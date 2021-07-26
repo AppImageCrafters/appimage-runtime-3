@@ -32,12 +32,14 @@ runtime_settings load_settings() {
 
     if (settings.target == NULL)
         settings.target = resolve_exe_path();
+    else
+        unsetenv("APPIMAGE_OPT_FILE");
 
     if (settings.mount_point == NULL) {
         settings.mount_point = create_default_mount_point();
         settings.remove_mount_point_on_exit = true;
-    }
-
+    } else
+        unsetenv("APPIMAGE_OPT_MOUNT_POINT");
 
     return settings;
 }
