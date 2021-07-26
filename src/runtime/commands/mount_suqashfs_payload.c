@@ -11,6 +11,8 @@
 // app headers
 #include "commands.h"
 
+#define PIPE_STATUS_MSG_LENGTH 1
+
 /**
  * Prepare low level filesystem operations struct to be used by fuse
  */
@@ -81,7 +83,9 @@ start_fuse(const char* mount_point, struct fuse_lowlevel_ops* sqfs_ll_ops, sqfs_
             if (control_pipe != NULL) {
                 // notify mount readiness
                 char status = 0;
-                write(control_pipe[1], &status, 1);
+                ssize_t bw = write(control_pipe[1], &status, PIPE_STATUS_MSG_LENGTH);
+                if (bw != PIPE_STATUS_MSG_LENGTH)
+                    fprintf(stderr, "ERROR: Unable to communicate fuse session status using control pipe.\n");
             }
 
 
@@ -146,7 +150,9 @@ int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, 
 
     if (child_pid == 0) {
         /* Child process closes up input side of pipe */
-        close(control_pipe[0]);
+        int close_ret = close(control_pipe[0]);
+        if (close_ret != 0)
+            fprintf(stderr, "ERROR: Unable to close input side of the control pipe.\n");
 
         /* execution will continue into the child process */
         int res = mount_squashfuse_payload(file, mount_point, offset, control_pipe) * -1;
@@ -157,11 +163,15 @@ int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, 
 
 
         // notify errors if any
-        write(control_pipe[1], &res, 1);
+        ssize_t bw = write(control_pipe[1], &res, 1);
+        if (bw != PIPE_STATUS_MSG_LENGTH)
+            fprintf(stderr, "ERROR: Unable to receive fuse session status using control pipe.\n");
         exit(res);
     } else {
         /* Parent process closes up output side of pipe */
-        close(control_pipe[1]);
+        int close_ret = close(control_pipe[1]);
+        if (close_ret != 0)
+            fprintf(stderr, "ERROR: Unable to close output side of the control pipe.\n");
 
         char status = 0;
         /* Wait for a byte to be send trough the pipe, this will signal the readiness of the fuse daemon */
