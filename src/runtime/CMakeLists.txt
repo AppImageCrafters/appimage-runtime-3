@@ -2,7 +2,7 @@ import_pkgconfig_target(TARGET_NAME fuse PKGCONFIG_TARGET fuse3)
 import_pkgconfig_target(TARGET_NAME zlib PKGCONFIG_TARGET zlib)
 import_pkgconfig_target(TARGET_NAME liblzma PKGCONFIG_TARGET liblzma)
 
-add_executable(runtime runtime.c commands/mount_suqashfs_payload.c commands/launch_apprun.c)
+add_executable(runtime runtime.c commands/mount_suqashfs_payload.c commands/launch_apprun.c settings.c)
 target_link_libraries(runtime PRIVATE libsquashfuse fuse3 zlib liblzma  appimage_type3_header pthread dl)
 target_compile_definitions(runtime PRIVATE FUSE_USE_VERSION=32)
 

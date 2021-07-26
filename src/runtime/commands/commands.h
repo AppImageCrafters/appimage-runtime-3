@@ -12,9 +12,10 @@
  * @param file
  * @param mount_point
  * @param offset
+ * @param clear_mount_point_on_unmount
  * @return
  */
-int mount_squashfs_payload_forked(char* file, char* mount_point, size_t offset);
+int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, bool remove_mount_point_on_exit);
 
 /* Mounts the payload contained in <file> with <offset> at <mount_point>
  *

@@ -79,8 +79,8 @@ start_fuse(const char* mount_point, struct fuse_lowlevel_ops* sqfs_ll_ops, sqfs_
 
             if (control_pipe != NULL) {
                 // notify mount readiness
-                char buf = 1;
-                write(control_pipe[1], &buf, 1);
+                char status = 0;
+                write(control_pipe[1], &status, 1);
             }
 
 
@@ -130,7 +130,7 @@ int mount_squashfuse_payload(char* file, const char* mount_point, size_t offset,
     return -err;
 }
 
-int mount_squashfs_payload_forked(char* file, char* mount_point, size_t offset) {
+int mount_squashfs_payload_forked(char* file, size_t offset, char* mount_point, bool remove_mount_point_on_exit) {
     int control_pipe[2];
     pid_t child_pid;
     if (pipe(control_pipe) != 0) {
@@ -148,15 +148,23 @@ int mount_squashfs_payload_forked(char* file, char* mount_point, size_t offset) 
         close(control_pipe[0]);
 
         /* execution will continue into the child process */
-        exit(mount_squashfuse_payload(file, mount_point, offset, control_pipe));
+        int res = mount_squashfuse_payload(file, mount_point, offset, control_pipe) * -1;
+
+        if (remove_mount_point_on_exit) {
+            rmdir(mount_point);
+        }
+
+
+        // notify errors if any
+        write(control_pipe[1], &res, 1);
+        exit(res);
     } else {
         /* Parent process closes up output side of pipe */
         close(control_pipe[1]);
 
-        char buf;
+        char status = 0;
         /* Wait for a byte to be send trough the pipe, this will signal the readiness of the fuse daemon */
-        read(control_pipe[0], &buf, 1);
+        read(control_pipe[0], &status, 1);
+        return status;
     }
-
-    return 0;
 }

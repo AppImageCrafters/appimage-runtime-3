@@ -1,12 +1,13 @@
+#include "settings.h"
 #include "commands/commands.h"
 
+
 int main(int argc, char** argv) {
-    char* target_file = "/tmp/AppDir.sqfs";
-    char* mount_point = "/tmp/appdir";
+    runtime_settings settings = load_settings();
 
-    mount_squashfs_payload_forked(target_file, mount_point, 0);
+    mount_squashfs_payload_forked(settings.target, 0, settings.mount_point, settings.remove_mount_point_on_exit);
 
-    execute_apprun(target_file, mount_point, argv);
+    execute_apprun(settings.target, settings.mount_point, argv);
 
     return 0;
 }
