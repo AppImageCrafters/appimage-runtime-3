@@ -2,10 +2,8 @@ name: "build"
 
 on:
   push:
-    branches-ignore:
-      - master
-    tags-ignore:
-      - 'v*'
+    branches:
+      - "master"
 
 jobs:
   build:
