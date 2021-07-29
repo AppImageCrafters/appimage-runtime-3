@@ -1,0 +1,120 @@
+name: "build"
+
+on:
+  push:
+    branches-ignore:
+      - master
+    tags-ignore:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        TARGET_ARCH: [ i386, x86_64, gnueabihf, aarch64 ]
+        BUILD_TYPE: [ Debug, Release ]
+    env:
+      BUILD_TYPE: ${{ matrix.BUILD_TYPE }}
+      TARGET_ARCH: ${{ matrix.TARGET_ARCH }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc g++ cmake make git libtool automake autoconf pkgconf  \
+            zlib1g-dev patch qemu-user-binfmt
+
+      - name: Install dependencies ${{ matrix.TARGET_ARCH }}
+        run: |
+          case "$TARGET_ARCH" in
+          "x86_64")
+            export TARGET_DEB_ARCH="amd64";
+            ;;
+          "i386")
+            export TARGET_DEB_ARCH="i386";
+            export EXTRA_DEPS="g++-multilib libc6-dev-i386";
+            ;;
+          "gnueabihf")
+            export TARGET_DEB_ARCH="armhf";
+            export EXTRA_DEPS=crossbuild-essential-armhf;
+            ;;
+          "aarch64")
+            export TARGET_DEB_ARCH="arm64";
+            export EXTRA_DEPS=crossbuild-essential-arm64;
+            ;;
+          esac
+
+          sudo dpkg --add-architecture $TARGET_DEB_ARCH;
+          if [ "$TARGET_ARCH" == "gnueabihf" ] || [ "$TARGET_ARCH" == "aarch64" ]; then
+            echo "deb [arch=$TARGET_DEB_ARCH] http://ports.ubuntu.com/ubuntu-ports bionic main" | sudo tee -a /etc/apt/sources.list;
+            echo "deb [arch=$TARGET_DEB_ARCH] http://ports.ubuntu.com/ubuntu-ports bionic-updates main" | sudo tee -a /etc/apt/sources.list;
+            echo "deb [arch=$TARGET_DEB_ARCH] http://ports.ubuntu.com/ubuntu-ports bionic-security main" | sudo tee -a /etc/apt/sources.list;
+          fi
+
+          sudo apt-get update -y || true;
+          sudo apt-get install -y libfuse-dev:$TARGET_DEB_ARCH liblzma-dev:$TARGET_DEB_ARCH zlib1g-dev:$TARGET_DEB_ARCH $EXTRA_DEPS
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure CMake ${{ matrix.TARGET_ARCH }}
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          if [ "$TARGET_ARCH" == "i386" ]; then
+            export CFLAGS=-m32;
+          fi
+
+          cmake $GITHUB_WORKSPACE -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            --toolchain="cmake/toolchains/$TARGET_ARCH.cmake"
+
+      - name: Build ${{ matrix.TARGET_ARCH }}
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: |
+          if [ "$TARGET_ARCH" == "i386" ]; then
+            export CFLAGS=-m32;
+            export PKG_CONFIG_PATH=/usr/lib/i386-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
+          fi
+          cmake --build . --config $BUILD_TYPE
+
+      - name: Test ${{ matrix.TARGET_ARCH }}
+        working-directory: ${{runner.workspace}}/build
+        shell: bash
+        run: ctest -C $BUILD_TYPE --output-on-failure
+
+      - name: Prepare artifacts
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          mkdir -p ../dist
+          cp src/runtime/runtime ../dist/runtime-$BUILD_TYPE-$TARGET_ARCH
+
+      - name: Upload Artifacts ${{ env.TARGET_ARCH }}
+        uses: actions/upload-artifact@v2.1.4
+        with:
+          name: artifacts
+          path: ${{runner.workspace}}/dist/*
+
+  publish:
+    runs-on: ubuntu-16.04
+    needs: build
+    steps:
+      - name: Download artifacts from build job
+        uses: actions/download-artifact@v2
+        with:
+          name: artifacts
+
+      - name: Release In-Development AppImage
+        uses: marvinpinto/action-automatic-releases@latest
+
+        with:
+          title: Continuous build
+          automatic_release_tag: 'continuous'
+          prerelease: true
+          draft: false
+          files: ./*
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
