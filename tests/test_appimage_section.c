@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
     assert(header->header_revision == 0x03);
     assert(header->payload_format == 0x01);
     assert(header->payload_offset == 0x0);
-    assert(header->resources_offset == 0x0);
+    assert(header->metadata_offset == 0x0);
     assert(header->signature_offset == 0x0);
 }
 

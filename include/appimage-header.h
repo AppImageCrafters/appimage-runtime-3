@@ -14,7 +14,7 @@ typedef struct {
     unsigned short header_revision;
     unsigned short payload_format;
     size_t payload_offset __attribute__ ((aligned (8)));
-    size_t resources_offset __attribute__ ((aligned (8)));
+    size_t metadata_offset __attribute__ ((aligned (8)));
     size_t signature_offset __attribute__ ((aligned (8)));
 } appimage_header_t;
 
