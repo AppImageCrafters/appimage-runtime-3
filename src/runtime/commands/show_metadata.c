@@ -13,7 +13,11 @@ void show_metadata(const char* target, const appimage_header_t* header) {
     size_t resources_len = header->signature_offset - header->metadata_offset;
 
     uint8_t* data = malloc(sizeof(uint8_t) * resources_len);
-    fread(data, sizeof(uint8_t), resources_len, f);
+    if (fread(data, sizeof(uint8_t), resources_len, f) != resources_len) {
+        fprintf(stderr, "Unable to read resources bson structure at: %zu with length %zu",
+                header->signature_offset, resources_len);
+        return;
+    }
 
     bson_t b;
     bool bson_init_res = bson_init_static(&b, data, resources_len);
