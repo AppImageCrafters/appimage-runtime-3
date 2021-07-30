@@ -29,6 +29,9 @@ runtime_settings load_settings() {
     settings.target = getenv("APPIMAGE_OPT_FILE");
     settings.mount_point = getenv("APPIMAGE_OPT_MOUNT_POINT");
 
+    settings.print_metadata = getenv("APPIMAGE_OPT_PRINT_METADATA");
+    if (settings.print_metadata)
+        unsetenv("APPIMAGE_OPT_PRINT_METADATA");
 
     if (settings.target == NULL)
         settings.target = resolve_exe_path();

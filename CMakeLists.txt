@@ -20,8 +20,8 @@ include(cmake/reproducible_builds.cmake)
 
 # make the compiler complain about every warning
 message(STATUS "Setting up paranoia mode")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wshadow -Wdouble-promotion -Wconversion")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wshadow -Wdouble-promotion -Wconversion")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror -Wshadow -Wdouble-promotion")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -Wshadow -Wdouble-promotion")
 
 add_subdirectory(lib)
 

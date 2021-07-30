@@ -12,6 +12,13 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    if (settings.print_metadata) {
+        // only print bundle metadata and exit
+        show_metadata(settings.target, header);
+        return 0;
+    }
+
+
     int status = mount_squashfs_payload_forked(settings.target, header->payload_offset, settings.mount_point,
                                                settings.remove_mount_point_on_exit);
     if (status != 0) {

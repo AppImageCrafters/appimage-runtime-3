@@ -7,6 +7,7 @@ typedef struct {
     char* target;
     char* mount_point;
     bool remove_mount_point_on_exit;
+    char* print_metadata;
 } runtime_settings;
 
 runtime_settings load_settings();

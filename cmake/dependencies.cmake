@@ -1,5 +1,5 @@
 # >= 3.2 required for ExternalProject_Add_StepDependencies
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.11)
 
 include(${CMAKE_CURRENT_LIST_DIR}/scripts.cmake)
 
@@ -39,3 +39,34 @@ else()
 
     import_pkgconfig_target(TARGET_NAME libsquashfuse PKGCONFIG_TARGET squashfuse)
 endif()
+
+
+if (NOT USE_SYSTEM_LIBBSON)
+    message(STATUS "Downloading and building libbson")
+    include(FetchContent)
+
+    FetchContent_Declare(bson
+        GIT_REPOSITORY https://github.com/mongodb/mongo-c-driver.git
+        GIT_TAG        1.18.0
+        GIT_SHALLOW    ON
+
+        UPDATE_DISCONNECTED True
+        BUILD_ALWAYS   OFF
+        )
+
+    FetchContent_GetProperties(bson)
+    if(NOT bson_POPULATED)
+        set(ENABLE_STATIC ON CACHE INTERNAL "")
+        set(ENABLE_BSON ON CACHE INTERNAL "")
+        set(ENABLE_MONGODB_AWS_AUTH OFF CACHE INTERNAL "")
+        set(ENABLE_TESTS OFF CACHE INTERNAL "")
+        set(ENABLE_EXAMPLES OFF CACHE INTERNAL "")
+        set(ENABLE_MONGOC OFF CACHE INTERNAL "")
+        FetchContent_Populate(bson)
+        add_subdirectory(${bson_SOURCE_DIR} ${bson_BINARY_DIR} EXCLUDE_FROM_ALL)
+    endif()
+else()
+    message(STATUS "Using system libbson")
+    find_package (bson-1.0 REQUIRED)
+    add_library(bson_static ALIAS mongo::bson_static)
+endif ()
