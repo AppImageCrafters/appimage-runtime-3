@@ -1,6 +1,7 @@
 import_pkgconfig_target(TARGET_NAME fuse2 PKGCONFIG_TARGET fuse)
 import_pkgconfig_target(TARGET_NAME zlib PKGCONFIG_TARGET zlib)
 import_pkgconfig_target(TARGET_NAME liblzma PKGCONFIG_TARGET liblzma)
+import_pkgconfig_target(TARGET_NAME libzstd PKGCONFIG_TARGET libzstd)
 
 add_executable(
     runtime
@@ -15,7 +16,7 @@ add_executable(
 target_link_libraries(
     runtime
     PRIVATE bson_static appimage_type3_header
-            libsquashfuse fuse2 zlib liblzma pthread dl
+            libsquashfuse fuse2 zlib liblzma libzstd pthread dl
 )
 
 target_compile_definitions(runtime PRIVATE _FILE_OFFSET_BITS=64)
