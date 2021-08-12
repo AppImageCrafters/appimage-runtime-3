@@ -53,7 +53,7 @@ jobs:
           fi
 
           sudo apt-get update -y || true;
-          sudo apt-get install -y libbson-dev:$TARGET_DEB_ARCH libfuse-dev:$TARGET_DEB_ARCH liblzma-dev:$TARGET_DEB_ARCH zlib1g-dev:$TARGET_DEB_ARCH $EXTRA_DEPS
+          sudo apt-get install -y libbson-dev:$TARGET_DEB_ARCH libfuse-dev:$TARGET_DEB_ARCH liblzma-dev:$TARGET_DEB_ARCH libzstd-dev:$TARGET_DEB_ARCH zlib1g-dev:$TARGET_DEB_ARCH $EXTRA_DEPS
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{runner.workspace}}/build
