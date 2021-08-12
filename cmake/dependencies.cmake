@@ -21,7 +21,7 @@ if(NOT USE_SYSTEM_SQUASHFUSE)
         GIT_TAG master
         UPDATE_COMMAND ""  # make sure CMake won't try to fetch updates unnecessarily and hence rebuild the dependency every time
         CONFIGURE_COMMAND sh autogen.sh
-        COMMAND sh <SOURCE_DIR>/configure --host=${HOST}  --disable-demo --disable-high-level --prefix=<INSTALL_DIR> --libdir=<INSTALL_DIR>/lib
+        COMMAND sh <SOURCE_DIR>/configure --host=${HOST}  --disable-demo --disable-high-level --enable-shared=no --enable-static=yes --without-zlib --without-xz --prefix=<INSTALL_DIR> --libdir=<INSTALL_DIR>/lib
         BUILD_COMMAND ${MAKE}
         BUILD_IN_SOURCE ON
         INSTALL_COMMAND ${MAKE} install
